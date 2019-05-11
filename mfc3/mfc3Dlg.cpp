@@ -7,6 +7,8 @@
 #include "mfc3.h"
 #include "mfc3Dlg.h"
 #include "afxdialogex.h"
+#include "resource.h"
+#include "Student.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -15,10 +17,27 @@
 
 // Cmfc3Dlg 对话框
 
+int num = 0;
+int count = 0;
+
+CString gettime()
+{
+	CString tm;
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+	tm.Format("%2d:%02d:%02d", st.wHour, st.wMinute, st.wSecond);
+	return tm;
+}
 
 
 Cmfc3Dlg::Cmfc3Dlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_MFC3_DIALOG, pParent)
+	, m_ID(_T(""))
+	, m_Name(_T(""))
+	, m_Sub1(_T(""))
+	, m_Sub2(_T(""))
+	, m_Sub3(_T(""))
+	, m_Average(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -26,11 +45,26 @@ Cmfc3Dlg::Cmfc3Dlg(CWnd* pParent /*=nullptr*/)
 void Cmfc3Dlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_COMBO_GRADE, m_Grade);
+	DDX_Text(pDX, IDC_ID, m_ID);
+	DDX_Control(pDX, IDC_LISTBOX, m_Log);
+	DDX_Control(pDX, IDC_LISTCTRL, m_Inquiry);
+	DDX_Text(pDX, IDC_NAME, m_Name);
+	DDX_Control(pDX, IDC_TREE1, m_TreeCon);
+	DDX_Text(pDX, IDC_SUBJECT1, m_Sub1);
+	DDX_Text(pDX, IDC_SUBJECT2, m_Sub2);
+	DDX_Text(pDX, IDC_SUBJECT3, m_Sub3);
+	DDX_Text(pDX, IDC_AVERAGE, m_Average);
 }
 
 BEGIN_MESSAGE_MAP(Cmfc3Dlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
+	ON_BN_CLICKED(BTN_ADD, &Cmfc3Dlg::OnBnClickedAdd)
+	ON_BN_CLICKED(BTN_RESET, &Cmfc3Dlg::OnBnClickedReset)
+	ON_NOTIFY(NM_DBLCLK, IDC_TREE1, &Cmfc3Dlg::OnNMDblclkTree)
+	ON_BN_CLICKED(BTN_CLEAR, &Cmfc3Dlg::OnBnClickedClear)
+	ON_NOTIFY(TVN_SELCHANGED, IDC_TREE1, &Cmfc3Dlg::OnTvnSelchangedTree)
 END_MESSAGE_MAP()
 
 
@@ -39,6 +73,27 @@ END_MESSAGE_MAP()
 BOOL Cmfc3Dlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
+
+	m_Grade.AddString(_T("一年级"));
+	m_Grade.AddString(_T("二年级"));
+	m_Grade.AddString(_T("三年级"));
+
+	
+	this->m_TreeCon.ModifyStyle(0, TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT);
+	this->root = this->m_TreeCon.InsertItem("年级");
+	this->root1 = this->m_TreeCon.InsertItem("一年级", root);
+	this->root2 = this->m_TreeCon.InsertItem("二年级", root);
+	this->root3 = this->m_TreeCon.InsertItem("三年级", root);
+
+	
+	m_Inquiry.SetExtendedStyle(LVS_EX_GRIDLINES | LVS_EX_FULLROWSELECT | LVS_EX_ONECLICKACTIVATE);
+	m_Inquiry.InsertColumn(0, _T("姓名"), LVCFMT_LEFT, 40);
+	m_Inquiry.InsertColumn(1, _T("学号"), LVCFMT_LEFT, 80);
+	m_Inquiry.InsertColumn(2, _T("年级"), LVCFMT_LEFT, 80);
+	m_Inquiry.InsertColumn(3, _T("Sub1"), LVCFMT_LEFT, 80);
+	m_Inquiry.InsertColumn(4, _T("Sub2"), LVCFMT_LEFT, 80);
+	m_Inquiry.InsertColumn(5, _T("Sub3"), LVCFMT_LEFT, 80);
+
 
 	// 设置此对话框的图标。  当应用程序主窗口不是对话框时，框架将自动
 	//  执行此操作
@@ -86,3 +141,102 @@ HCURSOR Cmfc3Dlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
+
+
+void Cmfc3Dlg::OnBnClickedAdd()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	UpdateData();
+	if (m_Name == "" || m_ID == "" || m_Sub1 == "" || m_Sub2 == "" || m_Sub3 == "")
+	{
+		MessageBox("输入有误");
+		return;
+	}
+	Student* temp = new Student();
+	temp->name = m_Name.GetString();
+	temp->id = m_ID.GetString();
+	m_Grade.GetLBText(m_Grade.GetCurSel(), temp->grade);
+	temp->sub1 = atof(m_Sub1.GetString());
+	temp->sub2 = atof(m_Sub2.GetString());
+	temp->sub3 = atof(m_Sub3.GetString());
+	temp->calcuavr();
+	HTREEITEM handle = NULL;
+	if (temp->grade == "一年级")
+	{
+		handle = m_TreeCon.InsertItem(temp->name, root1);
+	}
+	else if (temp->grade == "二年级")
+	{
+		handle = m_TreeCon.InsertItem(temp->name, root2);
+	}
+	else if (temp->grade == "三年级")
+	{
+		handle = m_TreeCon.InsertItem(temp->name, root3);
+	}
+	if (handle)
+	{
+		m_TreeCon.SetItemData(handle, (DWORD)temp);
+	}
+	m_Log.AddString(gettime() + " ： DATA ADD");
+	count = m_Log.GetCount();
+	m_Log.SetCurSel(count - 1);
+}
+
+
+void Cmfc3Dlg::OnBnClickedReset()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	m_Name.SetString("");
+	m_ID.SetString("");
+	m_Sub1.SetString("");
+	m_Sub2.SetString("");
+	m_Sub3.SetString("");
+	UpdateData(false);
+	m_Log.AddString(gettime() + " ： DATA RESET");
+	count = m_Log.GetCount();
+	m_Log.SetCurSel(count - 1);
+}
+
+
+void Cmfc3Dlg::OnNMDblclkTree(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	// TODO: 在此添加控件通知处理程序代码
+	*pResult = 0;
+	CString sub1, sub2, sub3;
+	HTREEITEM item = m_TreeCon.GetSelectedItem();
+	Student* stu = (Student*)m_TreeCon.GetItemData(item);
+	sub1.Format("%.1f", stu->sub1);
+	sub2.Format("%.1f", stu->sub2);
+	sub3.Format("%.1f", stu->sub3);
+	m_Inquiry.InsertItem(num, stu->name);
+	m_Inquiry.SetItemText(num, 1, stu->id);
+	m_Inquiry.SetItemText(num, 2, stu->grade);
+	m_Inquiry.SetItemText(num, 3, sub1);
+	m_Inquiry.SetItemText(num, 4, sub2);
+	m_Inquiry.SetItemText(num, 5, sub3);
+	num++;
+}
+
+
+void Cmfc3Dlg::OnBnClickedClear()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	m_Log.ResetContent();
+}
+
+
+void Cmfc3Dlg::OnTvnSelchangedTree(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LPNMTREEVIEW pNMTreeView = reinterpret_cast<LPNMTREEVIEW>(pNMHDR);
+	// TODO: 在此添加控件通知处理程序代码
+	*pResult = 0;
+	CString average;
+	HTREEITEM item = m_TreeCon.GetSelectedItem();
+	Student* stu = (Student*)m_TreeCon.GetItemData(item);
+	if (stu)
+	{
+		average.Format("%.2f", stu->average);
+		m_Average.SetString(average);
+		UpdateData(false);
+	}
+}
