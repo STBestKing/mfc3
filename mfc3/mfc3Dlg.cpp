@@ -20,6 +20,8 @@
 int num = 0;
 int count = 0;
 
+
+//获取当前时间
 CString gettime()
 {
 	CString tm;
@@ -74,18 +76,19 @@ BOOL Cmfc3Dlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
+	//添加下拉菜单选项
 	m_Grade.AddString(_T("一年级"));
 	m_Grade.AddString(_T("二年级"));
 	m_Grade.AddString(_T("三年级"));
 
-	
-	this->m_TreeCon.ModifyStyle(0, TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT);
-	this->root = this->m_TreeCon.InsertItem("年级");
-	this->root1 = this->m_TreeCon.InsertItem("一年级", root);
-	this->root2 = this->m_TreeCon.InsertItem("二年级", root);
-	this->root3 = this->m_TreeCon.InsertItem("三年级", root);
+	//添加树形图节点 root...等变量已经声明在.h文件中
+	m_TreeCon.ModifyStyle(0, TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT);
+	root = this->m_TreeCon.InsertItem("年级");
+	root1 = this->m_TreeCon.InsertItem("一年级", root);
+	root2 = this->m_TreeCon.InsertItem("二年级", root);
+	root3 = this->m_TreeCon.InsertItem("三年级", root);
 
-	
+	//添加List Control表头
 	m_Inquiry.SetExtendedStyle(LVS_EX_GRIDLINES | LVS_EX_FULLROWSELECT | LVS_EX_ONECLICKACTIVATE);
 	m_Inquiry.InsertColumn(0, _T("姓名"), LVCFMT_LEFT, 40);
 	m_Inquiry.InsertColumn(1, _T("学号"), LVCFMT_LEFT, 80);
@@ -146,12 +149,18 @@ HCURSOR Cmfc3Dlg::OnQueryDragIcon()
 void Cmfc3Dlg::OnBnClickedAdd()
 {
 	// TODO: 在此添加控件通知处理程序代码
+
+	//更新编辑框信息
 	UpdateData();
+
+	//避免输入错误数据
 	if (m_Name == "" || m_ID == "" || m_Sub1 == "" || m_Sub2 == "" || m_Sub3 == "")
 	{
 		MessageBox("输入有误");
 		return;
 	}
+
+	//设置Student属性
 	Student* temp = new Student();
 	temp->name = m_Name.GetString();
 	temp->id = m_ID.GetString();
@@ -160,7 +169,11 @@ void Cmfc3Dlg::OnBnClickedAdd()
 	temp->sub2 = atof(m_Sub2.GetString());
 	temp->sub3 = atof(m_Sub3.GetString());
 	temp->calcuavr();
+
+	//新建空句柄
 	HTREEITEM handle = NULL;
+
+	//添加节点并记录句柄
 	if (temp->grade == "一年级")
 	{
 		handle = m_TreeCon.InsertItem(temp->name, root1);
@@ -173,16 +186,22 @@ void Cmfc3Dlg::OnBnClickedAdd()
 	{
 		handle = m_TreeCon.InsertItem(temp->name, root3);
 	}
+
+	//使用句柄绑定数据
 	if (handle)
 	{
 		m_TreeCon.SetItemData(handle, (DWORD)temp);
 	}
+
+	//打印日志
 	m_Log.AddString(gettime() + " ： DATA ADD");
+
+	//ListBox自动下滑到底端
 	count = m_Log.GetCount();
 	m_Log.SetCurSel(count - 1);
 }
 
-
+//RESET按钮
 void Cmfc3Dlg::OnBnClickedReset()
 {
 	// TODO: 在此添加控件通知处理程序代码
@@ -192,12 +211,15 @@ void Cmfc3Dlg::OnBnClickedReset()
 	m_Sub2.SetString("");
 	m_Sub3.SetString("");
 	UpdateData(false);
+
 	m_Log.AddString(gettime() + " ： DATA RESET");
+
+	//ListBox自动下滑到底端
 	count = m_Log.GetCount();
 	m_Log.SetCurSel(count - 1);
 }
 
-
+//双击事件处理
 void Cmfc3Dlg::OnNMDblclkTree(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	// TODO: 在此添加控件通知处理程序代码
@@ -205,16 +227,26 @@ void Cmfc3Dlg::OnNMDblclkTree(NMHDR* pNMHDR, LRESULT* pResult)
 	CString sub1, sub2, sub3;
 	HTREEITEM item = m_TreeCon.GetSelectedItem();
 	Student* stu = (Student*)m_TreeCon.GetItemData(item);
-	sub1.Format("%.1f", stu->sub1);
-	sub2.Format("%.1f", stu->sub2);
-	sub3.Format("%.1f", stu->sub3);
-	m_Inquiry.InsertItem(num, stu->name);
-	m_Inquiry.SetItemText(num, 1, stu->id);
-	m_Inquiry.SetItemText(num, 2, stu->grade);
-	m_Inquiry.SetItemText(num, 3, sub1);
-	m_Inquiry.SetItemText(num, 4, sub2);
-	m_Inquiry.SetItemText(num, 5, sub3);
-	num++;
+
+	if (stu)
+	{
+		//CString转一位小数的double
+		sub1.Format("%.1f", stu->sub1);
+		sub2.Format("%.1f", stu->sub2);
+		sub3.Format("%.1f", stu->sub3);
+
+		//添加行 num为全局变量记录行数
+		m_Inquiry.InsertItem(num, stu->name);
+
+		//为num行插入列数据 第一列在插入行时完成
+		m_Inquiry.SetItemText(num, 1, stu->id);
+		m_Inquiry.SetItemText(num, 2, stu->grade);
+		m_Inquiry.SetItemText(num, 3, sub1);
+		m_Inquiry.SetItemText(num, 4, sub2);
+		m_Inquiry.SetItemText(num, 5, sub3);
+
+		num++;
+	}
 }
 
 
@@ -224,12 +256,13 @@ void Cmfc3Dlg::OnBnClickedClear()
 	m_Log.ResetContent();
 }
 
-
+//选中树形图节点事件 平均分输出
 void Cmfc3Dlg::OnTvnSelchangedTree(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	LPNMTREEVIEW pNMTreeView = reinterpret_cast<LPNMTREEVIEW>(pNMHDR);
 	// TODO: 在此添加控件通知处理程序代码
 	*pResult = 0;
+
 	CString average;
 	HTREEITEM item = m_TreeCon.GetSelectedItem();
 	Student* stu = (Student*)m_TreeCon.GetItemData(item);
